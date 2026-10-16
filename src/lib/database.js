@@ -1,5 +1,4 @@
-import { drizzle } from 'drizzle-orm/pg';
-import { Pool } from 'pg';
+import mongoose from 'mongoose';
 import { config } from '../config/index.js';
 
 if (!config.databaseUrl) {
@@ -7,12 +6,17 @@ if (!config.databaseUrl) {
   process.exit(1);
 }
 
-const pool = new Pool({
-  connectionString: config.databaseUrl,
-  // Neon requires SSL but with self‑signed certs; this disables strict verification
-  ssl: {
-    rejectUnauthorized: false,
-  },
+mongoose.connect(config.databaseUrl, {});
+
+const db = mongoose.connection;
+
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', () => {
+  console.log('Connected to MongoDB Atlas');
 });
 
-export const db = drizzle(pool);
+// Import models to register them with Mongoose
+import '../models/user.js';
+import '../models/post.js';
+
+export { db };

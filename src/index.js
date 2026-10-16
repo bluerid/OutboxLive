@@ -1,6 +1,6 @@
 // src/index.js
 // entry point
-
+import './lib/database.js';
 import Server from './server.js';
 
 const server = new Server();
