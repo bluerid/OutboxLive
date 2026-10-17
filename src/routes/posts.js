@@ -3,13 +3,14 @@ import Post from '../models/post.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { checkRole } from '../middleware/rbac.js';
 import { checkOwnership } from '../middleware/ownership.js';
+import postValidationSchema from '../schemas/post.js';
 
 const router = Router();
 
 // GET all posts - accessible by both admins and users
 router.get('/', authenticateToken, checkRole(['admin', 'user']), async (req, res) => {
     try {
-        const posts = await Post.find().populate('author', 'name email');
+        const posts = await Post.find({ deletedAt: null }).populate('author', 'name email');
         res.json(posts);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -19,7 +20,7 @@ router.get('/', authenticateToken, checkRole(['admin', 'user']), async (req, res
 // GET a single post by ID - accessible by both admins and users
 router.get('/:id', authenticateToken, checkRole(['admin', 'user']), async (req, res) => {
     try {
-        const post = await Post.findById(req.params.id).populate('author', 'name email');
+        const post = await Post.findOne({ _id: req.params.id, deletedAt: null }).populate('author', 'name email');
         if (!post) {
             return res.status(404).json({ message: 'Post not found' });
         }
@@ -31,8 +32,14 @@ router.get('/:id', authenticateToken, checkRole(['admin', 'user']), async (req, 
 
 // CREATE a new post - accessible by both admins and users
 // The author is set to the logged-in user
-router.post('/', authenticateToken, checkRole(['admin', 'user']), async (req, res) => {
+router.post('/', authenticateToken, checkRole(['user']), async (req, res) => {
     try {
+        // Validate request body
+        const { error } = postValidationSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({ message: error.details[0].message });
+        }
+
         const { title, content } = req.body;
 
         // Create post with author from token
@@ -52,6 +59,12 @@ router.post('/', authenticateToken, checkRole(['admin', 'user']), async (req, re
 // UPDATE a post - accessible by admins and the post's owner
 router.put('/:id', authenticateToken, checkRole(['admin', 'user']), checkOwnership('Post', 'author'), async (req, res) => {
     try {
+        // Validate request body
+        const { error } = postValidationSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({ message: error.details[0].message });
+        }
+
         const { title, content } = req.body;
 
         const post = await Post.findById(req.params.id);
@@ -72,7 +85,7 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'user']), checkOwnersh
 // DELETE a post - accessible by admins and the post's owner
 router.delete('/:id', authenticateToken, checkRole(['admin', 'user']), checkOwnership('Post', 'author'), async (req, res) => {
     try {
-        const post = await Post.findByIdAndDelete(req.params.id);
+        const post = await Post.findByIdAndUpdate(req.params.id, { deletedAt: new Date() }, { new: true });
         if (!post) {
             return res.status(404).json({ message: 'Post not found' });
         }
