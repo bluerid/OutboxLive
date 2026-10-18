@@ -12,16 +12,9 @@ export const checkOwnership = (modelName, ownerField = 'author') => {
                 return res.status(400).json({ message: 'Resource ID is required' });
             }
 
-            // Import the model dynamically to avoid circular dependencies
-            let Model;
-            if (modelName === 'Post') {
-                const Post = require('../models/post.js').default;
-                Model = Post;
-            } else if (modelName === 'User') {
-                const User = require('../models/user.js').default;
-                Model = User;
-            } else {
-                return res.status(500).json({ message: 'Ownership check not supported for this model' });
+            const Model = req.app.get(modelName);
+            if (!Model) {
+                return res.status(500).json({ message: `Model ${modelName} not set on app` });
             }
 
             // Find the resource by ID
