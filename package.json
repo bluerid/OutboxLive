@@ -1,5 +1,5 @@
 {
-  "name": "avaasa-project",
+  "name": "outbox-project",
   "version": "1.0.0",
   "description": "A minimal JavaScript npm project with dev and start scripts",
   "main": "src/index.js",
@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "joi": "^18.3.0",

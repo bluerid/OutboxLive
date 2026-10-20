@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import homeRouter from './routes/home.js';
 import apiRouter from './routes/api.js';
 import authRouter from './routes/auth.js';
@@ -16,6 +17,10 @@ class App {
   configure() {
     // Middleware
     this.app.use(express.json());
+    this.app.use(cors({
+      origin: 'http://localhost:5173', // Your frontend URL //TODO: load from env
+      credentials: true
+    }));
     this.app.set('db', db);
     this.app.set('Post', Post);
     this.app.set('User', User);

@@ -6,12 +6,41 @@ import { checkOwnership } from '../middleware/ownership.js';
 import postValidationSchema from '../schemas/post.js';
 
 const router = Router();
+const CONTENT_PREVIEW_LENGTH = process.env.CONTENT_PREVIEW_LENGTH || 200;
 
 // GET all posts - accessible by both admins and users
-router.get('/', authenticateToken, checkRole(['admin', 'user']), async (req, res) => {
+router.get('/', /* authenticateToken, checkRole(['admin', 'user']), */ async (req, res) => {
     try {
-        const posts = await Post.find({ deletedAt: null }).populate('author', 'name email');
-        res.json(posts);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 2;
+        const skip = (page - 1) * limit;
+
+        const posts = await Post.find({ deletedAt: null })
+            .skip(skip)
+            .limit(limit)
+            .populate('author', 'name email')
+            .lean();
+
+
+        const previews = posts.map((post) => ({
+            ...post,
+            content:
+                post.content.length > CONTENT_PREVIEW_LENGTH
+                    ? post.content.slice(0, CONTENT_PREVIEW_LENGTH) + '...'
+                    : post.content,
+        }));
+
+        const totalPosts = await Post.countDocuments({ deletedAt: null });
+
+        res.json({
+            posts: previews,
+            pagination: {
+                page,
+                limit,
+                totalPosts,
+                totalPages: Math.ceil(totalPosts / limit)
+            }
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -82,11 +111,30 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'user']), checkOwnersh
     }
 });
 
-// DELETE a post - accessible by admins and the post's owner
-router.delete('/:id', authenticateToken, checkRole(['admin', 'user']), checkOwnership('Post', 'author'), async (req, res) => {
+// DELETE a post - admins can delete any post, users can delete only their own posts
+router.delete('/:id', authenticateToken, checkRole(['admin', 'user']), async (req, res) => {
     try {
-        const post = await Post.findByIdAndUpdate(req.params.id, { deletedAt: new Date() }, { new: true });
+        const post = await Post.findById(req.params.id);
         if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+
+        // Check ownership for non-admin users
+        const isAdmin = req.user.user?.role === 'admin';
+        if (!isAdmin) {
+            // Apply ownership check for regular users only
+            const ownershipMiddleware = checkOwnership('Post', 'author');
+            await new Promise((resolve, reject) => {
+                ownershipMiddleware(req, res, (err) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            });
+        }
+
+        // Perform soft delete
+        const updatedPost = await Post.findByIdAndUpdate(req.params.id, { deletedAt: new Date() }, { new: true });
+        if (!updatedPost) {
             return res.status(404).json({ message: 'Post not found' });
         }
         res.json({ message: 'Post deleted successfully' });
