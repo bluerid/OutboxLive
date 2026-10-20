@@ -7,6 +7,7 @@ import adminsRouter from './routes/admins/index.js';
 import { db } from './lib/database.js';
 import Post from './models/post.js';
 import User from './models/user.js';
+import Comment from './models/comment.js';
 
 class App {
   constructor() {
@@ -24,6 +25,7 @@ class App {
     this.app.set('db', db);
     this.app.set('Post', Post);
     this.app.set('User', User);
+    this.app.set('Comment', Comment);
 
     // Register route groups
     this.app.use('/', homeRouter);

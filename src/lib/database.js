@@ -18,5 +18,6 @@ db.once('open', () => {
 // Import models to register them with Mongoose
 import '../models/user.js';
 import '../models/post.js';
+import '../models/comment.js';
 
 export { db };

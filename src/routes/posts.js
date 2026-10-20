@@ -16,6 +16,7 @@ router.get('/', /* authenticateToken, checkRole(['admin', 'user']), */ async (re
         const skip = (page - 1) * limit;
 
         const posts = await Post.find({ deletedAt: null })
+            .sort({ 'createdAt': -1 })
             .skip(skip)
             .limit(limit)
             .populate('author', 'name email')
