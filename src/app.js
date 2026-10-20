@@ -8,10 +8,13 @@ import { db } from './lib/database.js';
 import Post from './models/post.js';
 import User from './models/user.js';
 import Comment from './models/comment.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
 class App {
   constructor() {
     this.app = express();
+    this.frontendUrl = process.env.FRONTEND_URL || 'https://outboxlive-react.onrender.com';
     this.configure();
   }
 
@@ -19,7 +22,7 @@ class App {
     // Middleware
     this.app.use(express.json());
     this.app.use(cors({
-      origin: 'http://localhost:5173', // Your frontend URL //TODO: load from env
+      origin: [this.frontendUrl],
       credentials: true
     }));
     this.app.set('db', db);
